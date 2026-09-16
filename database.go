@@ -34,6 +34,13 @@ type TinyDB struct {
 	store   Store
 	touched map[string]bool
 
+	// diskKeyCount is how many key=value lines this instance last saw in the
+	// backing file. It is the evidence used to reject a pre-write read that
+	// came back emptier than the file is known to be — the signature of a read
+	// that raced a truncating write, which returns zero bytes and a nil error
+	// and is otherwise indistinguishable from an empty file.
+	diskKeyCount int
+
 	raw *Conv
 	mu  sync.RWMutex
 
@@ -118,6 +125,7 @@ func (t *TinyDB) Reload() error {
 	}
 
 	t.data = newData
+	t.diskKeyCount = len(diskPairs)
 	return nil
 }
 
@@ -157,6 +165,8 @@ func New(name string, log LoggerFunc, store Store) (*TinyDB, error) {
 			}
 		}
 	}
+
+	db.diskKeyCount = len(db.data)
 
 	return db, nil
 }

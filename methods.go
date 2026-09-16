@@ -8,6 +8,9 @@ import (
 const (
 	msgErrPersisting = "error persisting:"
 	msgErrAppending  = "error appending:"
+	// msgRewriteAborted is logged instead of destroying the file. It names the
+	// path because the reader's next question is always "which file?".
+	msgRewriteAborted = "kvdb: refusing to rewrite (the file could not be read back, or came back empty when it is known to have keys); nothing was written to:"
 )
 
 // Keys returns every key currently stored, in insertion order.
@@ -71,16 +74,29 @@ func (t *TinyDB) schedulePersist() error {
 				t.mu.Unlock()
 				return
 			}
-			disk, _ := t.store.GetFile(t.name)
+			disk, safe := t.readDiskForRewrite()
+			if !safe {
+				// Keep dirty and touched intact: the data is still unwritten, and
+				// the next Set or Flush must still try to write it.
+				t.debounceTimer = nil
+				t.mu.Unlock()
+				t.log(msgRewriteAborted, t.name)
+				return
+			}
 			data := reconcile(disk, t.data, t.touched)
 			t.dirty = false
 			t.debounceTimer = nil
 			t.touched = make(map[string]bool)
+			newCount := countPairs(data)
 			t.mu.Unlock()
 
 			if err := t.store.SetFile(t.name, data); err != nil {
 				t.log(msgErrPersisting, err.Error())
+				return
 			}
+			t.mu.Lock()
+			t.diskKeyCount = newCount
+			t.mu.Unlock()
 		})
 	}
 	return nil
@@ -104,12 +120,21 @@ func (t *TinyDB) append(p pair) error {
 }
 
 func (t *TinyDB) persist() error {
-	disk, _ := t.store.GetFile(t.name)
+	disk, safe := t.readDiskForRewrite()
+	if !safe {
+		t.log(msgRewriteAborted, t.name)
+		// Keep the pending writes pending: Flush clears dirty before calling
+		// persist, and the immediate-write path never sets it, so mark dirty
+		// here to guarantee the next Set or Flush retries the write.
+		t.dirty = true
+		return Err(msgRewriteAborted, t.name)
+	}
 	data := reconcile(disk, t.data, t.touched)
 	if err := t.store.SetFile(t.name, data); err != nil {
 		t.log(msgErrPersisting, err.Error())
 		return err
 	}
 	t.touched = make(map[string]bool)
+	t.diskKeyCount = countPairs(data)
 	return nil
 }

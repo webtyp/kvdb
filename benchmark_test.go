@@ -30,12 +30,11 @@ func BenchmarkSetAlloc(b *testing.B) {
 	db, _ := New("bench.db", nil, m)
 
 	b.ReportAllocs()
-	b.ResetTimer()
 
 	keyBuild := Convert("key")
 	valueBuild := Convert("value-for-")
 
-	for i := 0; i < b.N; i++ {
+	for i := 0; b.Loop(); i++ {
 		key := keyBuild.Write(i)
 		val := valueBuild.Write(i)
 		if err := db.Set(key.String(), val.String()); err != nil {

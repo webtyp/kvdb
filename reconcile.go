@@ -93,3 +93,15 @@ func reconcile(disk []byte, data []pair, touched map[string]bool) []byte {
 	copy(out, c.Bytes())
 	return out
 }
+
+// countPairs reports how many key=value lines data contains, so a successful
+// write can update the instance's picture of the file without re-reading it.
+func countPairs(data []byte) int {
+	n := 0
+	for _, line := range parseLines(data) {
+		if line.kind == kindPair {
+			n++
+		}
+	}
+	return n
+}
