@@ -1,10 +1,13 @@
 package kvdb
 
-// Store defines the persistence interface
+import "webtyp.com/files"
+
+// Store is where the database file lives: any webtyp.com/files implementation that can read,
+// write and append whole files (webtyp/opfs in a browser Worker, a disk store on a server,
+// files/mem in tests). A missing file is files.ErrNotExist, the normal first-run case.
 type Store interface {
-	GetFile(filePath string) ([]byte, error)
-	SetFile(filePath string, data []byte) error
-	AddToFile(filePath string, data []byte) error
+	files.ReadWriter
+	files.Appender
 }
 
 // KVStore defines the minimum API

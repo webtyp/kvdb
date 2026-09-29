@@ -32,7 +32,7 @@ func TestKeysReturnsInsertionOrder(t *testing.T) {
 
 func TestKeysReflectsLoadedFile(t *testing.T) {
 	store := newMockStore()
-	store.SetFile("test.db", []byte("X=1\nY=2\n"))
+	store.WriteFile("test.db", []byte("X=1\nY=2\n"))
 	db, _ := New("test.db", nil, store)
 	keys := db.Keys()
 	want := []string{"X", "Y"}

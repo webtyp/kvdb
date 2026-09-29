@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-// countingStore wraps mockStore and counts how many times SetFile is called.
+// countingStore wraps mockStore and counts how many times WriteFile is called.
 // The mutex protects setFileCount against the race between the debounce timer
 // goroutine (writer) and the test goroutine (reader).
 type countingStore struct {
@@ -15,11 +15,11 @@ type countingStore struct {
 	setFileCount int
 }
 
-func (c *countingStore) SetFile(path string, data []byte) error {
+func (c *countingStore) WriteFile(path string, data []byte) error {
 	c.mu.Lock()
 	c.setFileCount++
 	c.mu.Unlock()
-	return c.mockStore.SetFile(path, data)
+	return c.mockStore.WriteFile(path, data)
 }
 
 func (c *countingStore) count() int {
@@ -38,7 +38,7 @@ func (c *countingStore) resetCount() {
 // Set() calls produce only 1 disk write instead of N.
 func TestDebounceCoalescesRapidWrites(t *testing.T) {
 	cs := &countingStore{mockStore: *newMockStore()}
-	cs.SetFile("test.env", []byte("browser_position=0,0\nbrowser_size=900,700\ndev_mode=true\n"))
+	cs.WriteFile("test.env", []byte("browser_position=0,0\nbrowser_size=900,700\ndev_mode=true\n"))
 	db, _ := New("test.env", nil, cs)
 	cs.resetCount()
 
@@ -76,7 +76,7 @@ func TestDebounceCoalescesRapidWrites(t *testing.T) {
 // write even if the debounce timer has not fired yet.
 func TestFlushWritesPendingState(t *testing.T) {
 	cs := &countingStore{mockStore: *newMockStore()}
-	cs.SetFile("test.env", []byte("browser_position=0,0\nbrowser_size=900,700\n"))
+	cs.WriteFile("test.env", []byte("browser_position=0,0\nbrowser_size=900,700\n"))
 	db, _ := New("test.env", nil, cs)
 	cs.resetCount()
 
@@ -107,7 +107,7 @@ func TestFlushWritesPendingState(t *testing.T) {
 // persisted after rapid consecutive Set() calls (with default debounce).
 func TestRapidSetsPreserveAllValues(t *testing.T) {
 	cs := &countingStore{mockStore: *newMockStore()}
-	cs.SetFile("test.env", []byte("browser_position=0,0\nbrowser_size=900,700\ndev_mode=true\n"))
+	cs.WriteFile("test.env", []byte("browser_position=0,0\nbrowser_size=900,700\ndev_mode=true\n"))
 	db, _ := New("test.env", nil, cs)
 	cs.resetCount()
 

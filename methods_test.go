@@ -10,9 +10,9 @@ import (
 
 type failStore struct{}
 
-func (f *failStore) GetFile(filePath string) ([]byte, error)    { return nil, nil }
-func (f *failStore) SetFile(filePath string, data []byte) error { return errors.New("disk full") }
-func (f *failStore) AddToFile(filePath string, data []byte) error {
+func (f *failStore) ReadFile(filePath string) ([]byte, error)    { return nil, nil }
+func (f *failStore) WriteFile(filePath string, data []byte) error { return errors.New("disk full") }
+func (f *failStore) AppendFile(filePath string, data []byte) error {
 	return errors.New("disk full")
 }
 
@@ -100,16 +100,16 @@ func TestLogger(t *testing.T) {
 
 func TestPersist_DoesNotDropExternalKey(t *testing.T) {
 	store := newMockStore()
-	store.SetFile("test.db", []byte("A=1\n"))
+	store.WriteFile("test.db", []byte("A=1\n"))
 	db, _ := New("test.db", nil, store)
 
 	// write EXTERNAL=1 into the store behind db's back
-	store.SetFile("test.db", []byte("A=1\nEXTERNAL=1\n"))
+	store.WriteFile("test.db", []byte("A=1\nEXTERNAL=1\n"))
 
 	_ = db.Set("A", "9")
 	_ = db.Flush()
 
-	data, _ := store.GetFile("test.db")
+	data, _ := store.ReadFile("test.db")
 	if !strings.Contains(string(data), "EXTERNAL=1") {
 		t.Errorf("expected store to contain EXTERNAL=1, got %q", string(data))
 	}
@@ -117,13 +117,13 @@ func TestPersist_DoesNotDropExternalKey(t *testing.T) {
 
 func TestPersist_DoesNotDropComments(t *testing.T) {
 	store := newMockStore()
-	store.SetFile("test.db", []byte("# comment\nA=1\n"))
+	store.WriteFile("test.db", []byte("# comment\nA=1\n"))
 	db, _ := New("test.db", nil, store)
 
 	_ = db.Set("A", "9")
 	_ = db.Flush()
 
-	data, _ := store.GetFile("test.db")
+	data, _ := store.ReadFile("test.db")
 	if !strings.Contains(string(data), "# comment") {
 		t.Errorf("expected store to contain '# comment', got %q", string(data))
 	}
@@ -131,11 +131,11 @@ func TestPersist_DoesNotDropComments(t *testing.T) {
 
 func TestReload_AdoptsExternalChanges(t *testing.T) {
 	store := newMockStore()
-	store.SetFile("test.db", []byte("A=1\n"))
+	store.WriteFile("test.db", []byte("A=1\n"))
 	db, _ := New("test.db", nil, store)
 
 	// External edit changes untouched key's value and adds B=2
-	store.SetFile("test.db", []byte("A=1\nB=2\n"))
+	store.WriteFile("test.db", []byte("A=1\nB=2\n"))
 
 	if err := db.Reload(); err != nil {
 		t.Fatalf("unexpected error reloading: %v", err)
@@ -149,11 +149,11 @@ func TestReload_AdoptsExternalChanges(t *testing.T) {
 
 func TestReload_KeepsUnflushedLocalWrites(t *testing.T) {
 	store := newMockStore()
-	store.SetFile("test.db", []byte("A=orig\n"))
+	store.WriteFile("test.db", []byte("A=orig\n"))
 	db, _ := New("test.db", nil, store)
 
 	_ = db.Set("A", "local") // unflushed local write
-	store.SetFile("test.db", []byte("A=remote\n"))
+	store.WriteFile("test.db", []byte("A=remote\n"))
 
 	if err := db.Reload(); err != nil {
 		t.Fatalf("unexpected error reloading: %v", err)
@@ -167,11 +167,11 @@ func TestReload_KeepsUnflushedLocalWrites(t *testing.T) {
 
 func TestReload_DropsExternalDeletionsOfUntouchedKeys(t *testing.T) {
 	store := newMockStore()
-	store.SetFile("test.db", []byte("A=1\nB=2\n"))
+	store.WriteFile("test.db", []byte("A=1\nB=2\n"))
 	db, _ := New("test.db", nil, store)
 
 	// External edit deletes B from disk
-	store.SetFile("test.db", []byte("A=1\n"))
+	store.WriteFile("test.db", []byte("A=1\n"))
 
 	if err := db.Reload(); err != nil {
 		t.Fatalf("unexpected error reloading: %v", err)
@@ -185,14 +185,14 @@ func TestReload_DropsExternalDeletionsOfUntouchedKeys(t *testing.T) {
 
 func TestReload_AfterFlushAdoptsExternalEdits(t *testing.T) {
 	store := newMockStore()
-	store.SetFile("test.db", []byte("A=orig\n"))
+	store.WriteFile("test.db", []byte("A=orig\n"))
 	db, _ := New("test.db", nil, store)
 
 	_ = db.Set("A", "local")
 	_ = db.Flush() // local write flushed to disk
 
 	// External edit modifies A on disk after flush
-	store.SetFile("test.db", []byte("A=external\n"))
+	store.WriteFile("test.db", []byte("A=external\n"))
 
 	if err := db.Reload(); err != nil {
 		t.Fatalf("unexpected error reloading: %v", err)

@@ -16,7 +16,7 @@ func newMockStore() *mockStore {
 	}
 }
 
-func (m *mockStore) GetFile(filePath string) ([]byte, error) {
+func (m *mockStore) ReadFile(filePath string) ([]byte, error) {
 	data, ok := m.files[filePath]
 	if !ok {
 		return nil, os.ErrNotExist
@@ -24,12 +24,12 @@ func (m *mockStore) GetFile(filePath string) ([]byte, error) {
 	return data, nil
 }
 
-func (m *mockStore) SetFile(filePath string, data []byte) error {
+func (m *mockStore) WriteFile(filePath string, data []byte) error {
 	m.files[filePath] = data
 	return nil
 }
 
-func (m *mockStore) AddToFile(filePath string, data []byte) error {
+func (m *mockStore) AppendFile(filePath string, data []byte) error {
 	m.files[filePath] = append(m.files[filePath], data...)
 	return nil
 }
@@ -48,7 +48,7 @@ func TestNew(t *testing.T) {
 
 	t.Run("loads an existing database from the store", func(t *testing.T) {
 		store := newMockStore()
-		store.SetFile("test.db", []byte("foo=bar\nbaz=qux"))
+		store.WriteFile("test.db", []byte("foo=bar\nbaz=qux"))
 		db, err := New("test.db", nil, store)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -73,7 +73,7 @@ func TestNew(t *testing.T) {
 
 	t.Run("handles empty or malformed lines when loading", func(t *testing.T) {
 		store := newMockStore()
-		store.SetFile("test.db", []byte("foo=bar\n\nmalformed\nbaz=qux"))
+		store.WriteFile("test.db", []byte("foo=bar\n\nmalformed\nbaz=qux"))
 		db, err := New("test.db", nil, store)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -113,7 +113,7 @@ func TestNew(t *testing.T) {
 	t.Run("does not delete external env values containing multiple '=' (e.g. POSTGRES_DSN)", func(t *testing.T) {
 		store := newMockStore()
 		const dsn = "postgres://user:pass@host:5432/db?sslmode=disable&application_name=webtyp"
-		store.SetFile("test.db", []byte("POSTGRES_DSN="+dsn+"\ndev_mode=false"))
+		store.WriteFile("test.db", []byte("POSTGRES_DSN="+dsn+"\ndev_mode=false"))
 
 		db, err := New("test.db", nil, store)
 		if err != nil {

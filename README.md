@@ -60,18 +60,13 @@ type KVStore interface {
     Flush() error
 }
 
-// Store abstracts the persistence backend used by tinydb.
+// Store is where the database file lives: any webtyp.com/files implementation that can
+// read, write and append whole files (webtyp/opfs in the browser, a disk store on a server,
+// webtyp.com/files/mem in tests). AppendFile is used when adding a new key/value pair, so
+// an insert does not rewrite the whole file. A missing file is files.ErrNotExist.
 type Store interface {
-    // GetFile returns the full contents of a named file or an error.
-    GetFile(filePath string) ([]byte, error)
-
-    // SetFile replaces the file contents with the provided data.
-    SetFile(filePath string, data []byte) error
-
-    // AddToFile appends the provided data to the named file.
-    // Used by tinydb when adding a new key/value pair to avoid
-    // rewriting the entire backing store for each insert.
-    AddToFile(filePath string, data []byte) error
+    files.ReadWriter // ReadFile(path) ([]byte, error) · WriteFile(path, data) error
+    files.Appender   // AppendFile(path, data) error
 }
 ```
 
@@ -97,18 +92,18 @@ import (
 
 type FileStore struct{}
 
-func (fs FileStore) GetFile(path string) ([]byte, error) {
+func (fs FileStore) ReadFile(path string) ([]byte, error) {
     return os.ReadFile(path)
 }
 
-func (fs FileStore) SetFile(path string, data []byte) error {
+func (fs FileStore) WriteFile(path string, data []byte) error {
     return os.WriteFile(path, data, 0644)
 }
 
-// AddToFile appends bytes to the end of the named file. This is used by
+// AppendFile appends bytes to the end of the named file. This is used by
 // tinydb when inserting new key/value pairs to avoid rewriting the whole
 // store on every insert.
-func (fs FileStore) AddToFile(path string, data []byte) error {
+func (fs FileStore) AppendFile(path string, data []byte) error {
     f, err := os.OpenFile(path, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
     if err != nil {
         return err

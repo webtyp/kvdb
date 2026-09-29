@@ -21,7 +21,7 @@ func newCtrlStore() *ctrlStore {
 	return &ctrlStore{files: make(map[string][]byte)}
 }
 
-func (s *ctrlStore) GetFile(filePath string) ([]byte, error) {
+func (s *ctrlStore) ReadFile(filePath string) ([]byte, error) {
 	if s.failRead {
 		return nil, errors.New("simulated read failure")
 	}
@@ -35,12 +35,12 @@ func (s *ctrlStore) GetFile(filePath string) ([]byte, error) {
 	return data, nil
 }
 
-func (s *ctrlStore) SetFile(filePath string, data []byte) error {
+func (s *ctrlStore) WriteFile(filePath string, data []byte) error {
 	s.files[filePath] = data
 	return nil
 }
 
-func (s *ctrlStore) AddToFile(filePath string, data []byte) error {
+func (s *ctrlStore) AppendFile(filePath string, data []byte) error {
 	s.files[filePath] = append(s.files[filePath], data...)
 	return nil
 }

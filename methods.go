@@ -90,7 +90,7 @@ func (t *TinyDB) schedulePersist() error {
 			newCount := countPairs(data)
 			t.mu.Unlock()
 
-			if err := t.store.SetFile(t.name, data); err != nil {
+			if err := t.store.WriteFile(t.name, data); err != nil {
 				t.log(msgErrPersisting, err.Error())
 				return
 			}
@@ -109,7 +109,7 @@ func (t *TinyDB) append(p pair) error {
 	t.raw.Write(p.Value)
 	t.raw.Write("\n")
 
-	if err := t.store.AddToFile(t.name, t.raw.Bytes()); err != nil {
+	if err := t.store.AppendFile(t.name, t.raw.Bytes()); err != nil {
 		// log only on error
 		t.log(msgErrAppending, err.Error())
 		return err
@@ -130,7 +130,7 @@ func (t *TinyDB) persist() error {
 		return Err(msgRewriteAborted, t.name)
 	}
 	data := reconcile(disk, t.data, t.touched)
-	if err := t.store.SetFile(t.name, data); err != nil {
+	if err := t.store.WriteFile(t.name, data); err != nil {
 		t.log(msgErrPersisting, err.Error())
 		return err
 	}

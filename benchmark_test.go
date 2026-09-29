@@ -11,13 +11,13 @@ type memStore struct {
 	data []byte
 }
 
-func (m *memStore) GetFile(path string) ([]byte, error) { return m.data, nil }
-func (m *memStore) SetFile(path string, data []byte) error {
+func (m *memStore) ReadFile(path string) ([]byte, error) { return m.data, nil }
+func (m *memStore) WriteFile(path string, data []byte) error {
 	m.data = append([]byte(nil), data...)
 	return nil
 }
 
-func (m *memStore) AddToFile(path string, data []byte) error {
+func (m *memStore) AppendFile(path string, data []byte) error {
 	m.data = append(m.data, data...)
 	return nil
 }

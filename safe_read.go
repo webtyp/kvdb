@@ -16,7 +16,7 @@ package kvdb
 // A read that fails or is empty when no keys were ever seen is the normal
 // first-write case for a project that has no file yet, and is safe.
 func (t *TinyDB) readDiskForRewrite() (disk []byte, safe bool) {
-	raw, err := t.store.GetFile(t.name)
+	raw, err := t.store.ReadFile(t.name)
 	if err != nil {
 		return nil, t.diskKeyCount == 0
 	}

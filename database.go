@@ -76,7 +76,7 @@ func (t *TinyDB) Reload() error {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
-	raw, err := t.store.GetFile(t.name)
+	raw, err := t.store.ReadFile(t.name)
 	if err != nil {
 		return err
 	}
@@ -146,7 +146,7 @@ func New(name string, log LoggerFunc, store Store) (*TinyDB, error) {
 	}
 
 	// try to load DB from Store
-	raw, err := store.GetFile(name)
+	raw, err := store.ReadFile(name)
 	if err == nil && len(raw) > 0 {
 		lines := Convert(string(raw)).Split("\n")
 		for _, line := range lines {
