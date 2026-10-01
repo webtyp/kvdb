@@ -7,4 +7,4 @@ require (
 	webtyp.com/time v0.5.7
 )
 
-require webtyp.com/files v0.0.3
+require webtyp.com/files v0.0.4
