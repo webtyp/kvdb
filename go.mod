@@ -9,4 +9,4 @@ require (
 
 require webtyp.com/files v0.0.4
 
-require webtyp.com/date v0.0.10 // indirect
+require webtyp.com/date v0.0.11 // indirect
