@@ -3,7 +3,7 @@ module webtyp.com/kvdb
 go 1.26.8
 
 require (
-	webtyp.com/fmt v1.0.0
+	webtyp.com/fmt v1.0.1
 	webtyp.com/time v0.6.4
 )
 
